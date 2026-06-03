@@ -36,46 +36,67 @@ document.addEventListener("DOMContentLoaded", () => {
     unlockerEl.addEventListener("click", forceUnlockCamera);
     document.body.addEventListener("click", forceUnlockCamera, { once: true });
   
-    // 3. ⭐️ 強固版：前、後鏡頭切換功能 ⭐️
-    flipBtn.addEventListener("click", () => {
-        const arSystem = sceneEl.systems["mindar-image-system"];
-        
-        if (arSystem) {
-        try {
-            console.log("進行前後鏡頭對調...");
-            
-            // 執行 MindAR 鏡頭切換
-            arSystem.switchCamera();
-            
-            // 【修復 iOS 限制】切換鏡頭後，延遲 300~500 毫秒強制對所有生成的視訊標籤重新調用 .play()
-            setTimeout(() => {
-            const videoElements = document.querySelectorAll('video');
-            videoElements.forEach(video => {
-                // 確保新鏡頭具備自動播放所需的必備屬性
-                video.setAttribute('playsinline', '');
-                video.setAttribute('muted', '');
-                
-                video.play()
-                .then(() => {
-                    console.log("新鏡頭視訊成功重啟播放");
-                    // 再次確保解鎖提示隱藏
-                    unlockerEl.classList.add('hidden');
-                })
-                .catch(err => {
-                    console.warn("新鏡頭重啟播放被瀏覽器攔截，嘗試手動解鎖：", err);
-                    // 如果被攔截，顯示手動解鎖提示，點擊螢幕即可恢復
-                    unlockerEl.classList.remove('hidden');
-                });
-            });
-            }, 400);
+    // 3. ⭐️ 原生 WebRTC 置換法：前置 / 後置鏡頭切換 ⭐️
+    let isFrontCamera = false; // 預設為後置鏡頭 (false)
 
-        } catch (err) {
-            // 若硬體或瀏覽器不支援切換，將錯誤原因印在螢幕上
-            alert("鏡頭切換失敗，原因：" + err.message);
+    flipBtn.addEventListener("click", async () => {
+    // 尋找 MindAR 產生的相機視訊元件
+    const video = document.querySelector('video');
+    if (!video) {
+        alert("相機視訊尚未準備就緒，請稍候");
+        return;
+    }
+
+    console.log("正在切換鏡頭...");
+    
+    // 1. 取得並停止目前的相機串流
+    const currentStream = video.srcObject;
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => {
+        track.stop(); // 徹底釋放舊鏡頭，否則部分手機會報錯
+        });
+    }
+
+    // 2. 切換鏡頭狀態
+    isFrontCamera = !isFrontCamera;
+
+    // 3. 設定新鏡頭的請求參數
+    const constraints = {
+        video: {
+        facingMode: isFrontCamera ? "user" : "environment", // 關鍵：user 代表前鏡頭，environment 代表後鏡頭
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
         }
-        } else {
-        alert("AR 系統尚未載入完畢，請稍候再試。");
-        }
+    };
+
+    try {
+        // 4. 向手機瀏覽器請求新鏡頭的串流
+        const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // 5. 將新串流直接塞給原本的 video 標籤
+        video.srcObject = newStream;
+        
+        // 確保視訊具備 iOS 播放必備屬性
+        video.setAttribute('playsinline', '');
+        video.setAttribute('muted', '');
+        
+        // 強制播放新串流
+        await video.play();
+        console.log("鏡頭切換成功！目前為：" + (isFrontCamera ? "前鏡頭" : "後鏡頭"));
+
+        // 6. 觸發瀏覽器縮放事件，強制 MindAR 重新計算鏡頭畫面的比例
+        window.dispatchEvent(new Event('resize'));
+        
+        // 隱藏解鎖提示
+        unlockerEl.classList.add('hidden');
+
+    } catch (err) {
+        console.error("切換鏡頭發生錯誤：", err);
+        alert("切換鏡頭失敗：" + err.message);
+        
+        // 失敗時，還原鏡頭狀態變數
+        isFrontCamera = !isFrontCamera;
+    }
     });
   
     // 4. 揮手遮擋魔術檢測邏輯
