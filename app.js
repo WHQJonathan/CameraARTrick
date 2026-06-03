@@ -1,112 +1,88 @@
-// 註冊 PWA Service Worker
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('Service Worker 已就緒'))
-        .catch(err => console.error('PWA 註冊失敗', err));
-    });
-  }
-  
-  document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
+    const sceneEl = document.querySelector('a-scene');
     const targetEl = document.getElementById("card-target");
     const overlayEl = document.getElementById("magic-card-overlay");
-    const statusEl = document.getElementById("magic-status");
     const shutterBtn = document.getElementById("shutter-btn");
+    const shieldEl = document.getElementById("ios-camera-shield");
+    const activateBtn = document.getElementById("activate-camera-btn");
   
-    let isMagicActive = true; // 起始狀態：顯示覆蓋物（黑桃A）
+    let isMagicActive = true;
     let lostTimestamp = 0;
-
-    // ⭐️ 關鍵修正：當 AR 與相機載入完成後，將背景轉為透明，顯露鏡頭畫面
+    let isCameraActive = false;
+  
+    // 1. 正常相機啟用處理
     sceneEl.addEventListener('arReady', () => {
-        console.log("相機與引擎載入成功！");
-        document.body.classList.add('ar-active');
+      console.log("相機成功啟動！");
+      isCameraActive = true;
+      document.body.classList.add('ar-active');
+      shieldEl.classList.add('hidden'); // 隱藏防護盾
     });
-
-    // 錯誤診斷監聽
-    sceneEl.addEventListener('arError', (event) => {
-        console.error("AR 啟動失敗：", event);
-        alert("相機啟動失敗，請確保使用 HTTPS 連線，並已授權相機權限。");
+  
+    // 2. iOS 防黑安全保護：若網頁載入 3.5 秒後相機無反應，自動跳出手動按鈕以解除 iOS 對自動影音播放的阻擋
+    setTimeout(() => {
+      if (!isCameraActive) {
+        console.log("偵測到 iOS 自動播放限制，顯示手動解鎖按鈕");
+        shieldEl.classList.remove('hidden');
+      }
+    }, 3500);
+  
+    // 手動啟動按鈕
+    activateBtn.addEventListener("click", () => {
+      // 試圖透過使用者手勢強行啟動 A-Frame 與相機視訊播放
+      const videoElements = document.querySelectorAll('video');
+      videoElements.forEach(video => {
+        video.play().catch(err => console.log("播放嘗試:", err));
+      });
+      
+      // 重新通知 MindAR 啟動
+      if (sceneEl.systems["mindar-image-system"]) {
+        sceneEl.systems["mindar-image-system"].start();
+      }
+      
+      shieldEl.classList.add('hidden');
     });
-    // 1. 當手遮擋住撲克牌時，AR 追蹤斷開，記錄時間
+  
+    // 3. 揮手辨識算法邏輯
     targetEl.addEventListener("targetLost", () => {
       lostTimestamp = Date.now();
     });
   
-    // 2. 當手離開、撲克牌重新出現時，計算時間差
     targetEl.addEventListener("targetFound", () => {
       if (lostTimestamp > 0) {
         const duration = Date.now() - lostTimestamp;
         
-        // 計算遮擋時間：
-        // 如果手是「快速揮過」，遮擋時間大約會落在 150 毫秒至 900 毫秒之間。
-        // 如果是整張牌移開再移回來，通常會大於 1 秒。
+        // 揮手遮擋時間在 150ms ~ 900ms 之間視為快速揮舞遮擋
         if (duration >= 150 && duration <= 900) {
-          toggleMagic();
+          isMagicActive = !isMagicActive;
+          overlayEl.setAttribute("visible", isMagicActive ? "true" : "false");
+          
+          const statusEl = document.getElementById("magic-status");
+          if (isMagicActive) {
+            statusEl.textContent = "拍照";
+            statusEl.style.color = "#FFD700"; // 魔法效果：拍照顯示為黃色
+          } else {
+            statusEl.textContent = "拍照";
+            statusEl.style.color = "#ffffff"; // 普通效果
+          }
+          
+          if (navigator.vibrate) navigator.vibrate(50);
         }
-        lostTimestamp = 0; // 重置計時器
+        lostTimestamp = 0;
       }
     });
   
-    // 3. 切換「魔法狀態」與「原狀」
-    function toggleMagic() {
-      isMagicActive = !isMagicActive;
-      
-      // 控制虛擬圖片的顯示/隱藏。當 visible 為 false 時，觀眾會看到螢幕上回復成原來的實體牌
-      overlayEl.setAttribute("visible", isMagicActive ? "true" : "false");
-      
-      // 更新 iOS UI 上的狀態提示
-      if (isMagicActive) {
-        statusEl.textContent = "MAGIC ACTIVE";
-        statusEl.style.color = "#FFD700"; // 黃色
-      } else {
-        statusEl.textContent = "NORMAL MODE";
-        statusEl.style.color = "#8E8E93"; // 灰色
-      }
-  
-      // 觸覺回饋（短震動），提示魔術師切換成功（此功能主要支援 Android Chrome，iOS 尚待規範）
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
-    }
-  
-    // 4. iOS 拍照閃白效果
+    // 4. 拍照閃白效果
     shutterBtn.addEventListener("click", () => {
       const flashDiv = document.createElement("div");
-      flashDiv.style.position = "absolute";
-      flashDiv.style.top = "0";
-      flashDiv.style.left = "0";
-      flashDiv.style.width = "100%";
-      flashDiv.style.height = "100%";
-      flashDiv.style.background = "#fff";
-      flashDiv.style.zIndex = "999";
-      flashDiv.style.pointerEvents = "none";
+      flashDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:999;pointer-events:none;";
       document.body.appendChild(flashDiv);
   
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
   
       setTimeout(() => {
-        flashDiv.style.transition = "opacity 0.4s ease";
+        flashDiv.style.transition = "opacity 0.3s ease";
         flashDiv.style.opacity = "0";
-        setTimeout(() => flashDiv.remove(), 400);
+        setTimeout(() => flashDiv.remove(), 300);
       }, 50);
-    });
-        // 在 app.js 最下方加入此段偵錯碼
-    const sceneEl = document.querySelector('a-scene');
-
-    // 監聽 MindAR 啟動成功的事件
-    sceneEl.addEventListener('arReady', (event) => {
-    console.log("MindAR 引擎與相機已順利啟動！");
-    });
-
-    // 監聽 MindAR 啟動失敗的事件
-    sceneEl.addEventListener('arError', (event) => {
-    console.error("MindAR 啟動失敗：", event);
-    
-    // 彈出錯誤提示
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-        alert("【錯誤】WebAR 必須在 HTTPS 安全連線下才能使用相機。請部署至 HTTPS 伺服器再測試。");
-    } else {
-        alert("【錯誤】無法啟動相機。請檢查是否已在瀏覽器設定中「允許」此網站存取相機。");
-    }
     });
   });

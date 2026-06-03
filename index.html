@@ -5,67 +5,97 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
   <title>Camera</title>
   
-  <!-- PWA 設定 -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icon-192.png">
 
-  <!-- A-Frame 與 MindAR -->
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- 降級至高度相容 iOS 的 A-Frame 1.4.2，這可以有效解決 1.5.0 在 iOS 上的鏡頭黑底問題 -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- iOS 26 液態玻璃相機 UI -->
-  <div id="camera-ui">
-    
-    <!-- 頂部：懸浮式液態玻璃工具列 -->
-    <div class="top-bar-floating liquid-glass">
-      <div class="control-icon">⚡️</div>
-      <div class="control-icon">HDR</div>
-      <!-- iOS 26 簡約風狀態指示器 -->
-      <span class="magic-indicator" id="magic-status">MAGIC ACTIVE</span>
-      <div class="control-icon">⊙</div>
-    </div>
-    
-    <!-- 中央視圖與變焦氣泡 -->
-    <div class="viewport-area">
-      <!-- 1x 變焦氣泡也採用液態玻璃懸浮樣式 -->
-      <div class="zoom-bubble-floating liquid-glass">1x</div>
-    </div>
-
-    <!-- 底部：懸浮式液態玻璃控制面板 -->
-    <div class="bottom-dock-floating liquid-glass">
-      <!-- 簡約模式選擇 -->
-      <div class="modes-slider">
-        <div class="modes-track">
-          <span class="mode-item">VIDEO</span>
-          <span class="mode-item active">PHOTO</span>
-          <span class="mode-item">PORTRAIT</span>
-        </div>
-      </div>
-
-      <!-- 快門與快速按鍵列 -->
-      <div class="controls-row">
-        <!-- 左：液態玻璃相簿縮圖 -->
-        <div class="gallery-thumbnail liquid-glass" style="background-image: url('icon-192.png');"></div>
-        
-        <!-- 中：雙環液態玻璃快門 -->
-        <div class="shutter-outer-ios26" id="shutter-btn">
-          <div class="shutter-inner-ios26"></div>
-        </div>
-        
-        <!-- 右：鏡頭切換鈕 -->
-        <div class="flip-button-ios26 liquid-glass">🔄</div>
-      </div>
+  <!-- iOS 自動播放相機防護鎖（當 iOS 系統阻擋自動鏡頭時，會自動浮出此手動引導按鈕） -->
+  <div id="ios-camera-shield" class="hidden">
+    <div class="shield-content">
+      <div class="shield-icon">📷</div>
+      <p>iOS 需要授權啟動鏡頭</p>
+      <button id="activate-camera-btn">開啟相機</button>
     </div>
   </div>
 
-  <!-- AR 渲染區域 -->
+  <!-- iOS 精準版相機介面 -->
+  <div id="camera-ui">
+    
+    <!-- 頂部黑色背景遮罩 (4:3) -->
+    <div class="top-black-bar">
+      <!-- 綠色正在取用鏡頭指示點 -->
+      <div class="recording-dot"></div>
+    </div>
+
+    <!-- 中間透明觀景窗區域 (AR 鏡頭會在此區域透出) -->
+    <div class="viewfinder-viewport">
+      
+      <!-- 右上角功能控制膠囊 -->
+      <div class="top-floating-pill">
+        <span class="pill-icon">⚡️<sub style="font-size: 8px;">A</sub></span>
+        <span class="pill-icon active-yellow">◎</span>
+        <span class="pill-icon">⁙</span>
+      </div>
+
+      <!-- 左下角微距黃色小花 -->
+      <div class="macro-button">
+        <span class="macro-icon">🌷</span>
+      </div>
+
+      <!-- 中央底部懸浮變焦按鈕 -->
+      <div class="zoom-container">
+        <span class="zoom-item">.5</span>
+        <span class="zoom-item active" id="zoom-1x">1x</span>
+        <span class="zoom-item">2</span>
+        <span class="zoom-item">4</span>
+        <span class="zoom-item">8</span>
+      </div>
+
+    </div>
+
+    <!-- 底部黑色面板 (4:3) -->
+    <div class="bottom-black-panel">
+      
+      <!-- 控制與快門行 -->
+      <div class="shutter-row">
+        <!-- 左下：相簿照片縮圖 -->
+        <div class="gallery-preview-box">
+          <div class="gallery-thumbnail-inner" style="background-image: url('icon-192.png');"></div>
+        </div>
+
+        <!-- 正中：經典 iOS 雙環白大快門 -->
+        <div class="ios-shutter-btn" id="shutter-btn">
+          <div class="ios-shutter-inner"></div>
+        </div>
+
+        <!-- 右下：相機翻轉鈕 -->
+        <div class="camera-flip-btn">
+          <span>🔄</span>
+        </div>
+      </div>
+
+      <!-- 最底部的「錄影 / 拍照」黃色高亮切換膠囊 -->
+      <div class="modes-pill-container">
+        <div class="modes-pill">
+          <span class="mode-text">錄影</span>
+          <span class="mode-text active" id="magic-status">拍照</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- AR 引擎 -->
   <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;" 
     embedded 
@@ -76,9 +106,7 @@
   >
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- 撲克牌追蹤實體 -->
     <a-entity id="card-target" mindar-image-target="targetIndex: 0">
-      <!-- 虛擬疊加牌面 (轉換後的新牌) -->
       <a-image id="magic-card-overlay" src="./new_card.png" position="0 0 0" height="1.4" width="1" rotation="0 0 0" visible="true"></a-image>
     </a-entity>
   </a-scene>
