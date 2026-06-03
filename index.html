@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <title>Camera</title>
+  
+  <!-- PWA 設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- A-Frame 與 MindAR -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- iOS 相機風格 UI 覆蓋層 -->
+  <div id="camera-ui">
+    <!-- 頂部狀態列 -->
+    <div class="top-bar">
+      <div class="top-icon">⚡️</div>
+      <div class="top-icon">ᐯ</div>
+      <!-- 黃色狀態文字，代表魔術模式 -->
+      <span class="magic-mode-indicator" id="magic-status">MAGIC ACTIVE</span>
+      <div class="top-icon">⊙</div>
+    </div>
+    
+    <!-- 觀景窗與變焦 bubble -->
+    <div class="viewport-area">
+      <!-- iOS 的 1x 變焦鈕 -->
+      <div class="zoom-bubble">1x</div>
+    </div>
+
+    <!-- 底部控制面板 -->
+    <div class="bottom-panel">
+      <!-- 模式選單滑動列 -->
+      <div class="modes-slider">
+        <div class="modes-track">
+          <span class="mode-item">SLO-MO</span>
+          <span class="mode-item">VIDEO</span>
+          <span class="mode-item active">PHOTO</span>
+          <span class="mode-item">PORTRAIT</span>
+          <span class="mode-item">PANO</span>
+        </div>
+      </div>
+
+      <!-- 控制按鈕列 -->
+      <div class="controls-row">
+        <!-- 左下：相簿縮圖 -->
+        <div class="gallery-thumbnail" style="background-image: url('icon-192.png');"></div>
+        
+        <!-- 正中：iOS 雙環白快門 -->
+        <div class="shutter-outer" id="shutter-btn">
+          <div class="shutter-inner"></div>
+        </div>
+        
+        <!-- 右下：鏡頭旋轉紐 -->
+        <div class="flip-button">🔄</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AR 渲染區域 -->
+  <a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;" 
+    embedded 
+    color-space="sRGB" 
+    renderer="colorManagement: true, physicallyCorrectLights: true" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false"
+  >
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- 撲克牌追蹤實體 -->
+    <a-entity id="card-target" mindar-image-target="targetIndex: 0">
+      <!-- 虛擬疊加牌面 (轉換後的新牌) -->
+      <a-image id="magic-card-overlay" src="./new_card.png" position="0 0 0" height="1.4" width="1" rotation="0 0 0" visible="true"></a-image>
+    </a-entity>
+  </a-scene>
+
+  <script src="app.js"></script>
+</body>
+</html>
