@@ -4,18 +4,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const overlayEl = document.getElementById("magic-card-overlay");
     const shutterBtn = document.getElementById("shutter-btn");
     const unlockerEl = document.getElementById("ios-camera-unlocker");
+    const flipBtn = document.getElementById("flip-camera-btn"); // 新增：翻轉按鈕
   
     let isMagicActive = true;
     let lostTimestamp = 0;
+    let isCameraActive = false;
   
     // 1. 偵測相機啟動成功
     sceneEl.addEventListener('arReady', () => {
-      console.log("MindAR 啟動成功，隱藏點擊啟動解鎖提示");
+      console.log("MindAR 啟動成功，隱藏手動解鎖提示");
+      isCameraActive = true;
       unlockerEl.classList.add('hidden');
     });
   
-    // 2. ⭐️ iOS 相機「點擊強行啟動與解鎖」機制 ⭐️
-    // 任何對螢幕的點擊行為，都會強行解鎖播放 iOS 的 WebRTC 鏡頭視訊
+    // 2. iOS 相機「手勢啟動解鎖」機制
     const forceUnlockCamera = () => {
       const videoElements = document.querySelectorAll('video');
       videoElements.forEach(video => {
@@ -23,28 +25,26 @@ document.addEventListener("DOMContentLoaded", () => {
         video.setAttribute('muted', '');
         video.play().then(() => {
           unlockerEl.classList.add('hidden');
-        }).catch(err => console.log("等待手勢解鎖中:", err));
+        }).catch(err => console.log("等待點擊手勢解鎖中:", err));
       });
   
-      // 試圖強行啟用 AR
       if (sceneEl.systems["mindar-image-system"]) {
         sceneEl.systems["mindar-image-system"].start();
       }
     };
   
-    // 當使用者點選解鎖層時，啟動強制播放
     unlockerEl.addEventListener("click", forceUnlockCamera);
     document.body.addEventListener("click", forceUnlockCamera, { once: true });
-
+  
     // 3. ⭐️ 新增：前、後鏡頭切換功能 ⭐️
     flipBtn.addEventListener("click", () => {
-        if (sceneEl.systems["mindar-image-system"]) {
+      if (sceneEl.systems["mindar-image-system"]) {
         console.log("進行前後鏡頭對調...");
         sceneEl.systems["mindar-image-system"].switchCamera(); // 調用 MindAR 內建鏡頭切換 API
-        }
+      }
     });
   
-    // 3. 揮手遮擋魔術檢測邏輯
+    // 4. 揮手遮擋魔術檢測邏輯
     targetEl.addEventListener("targetLost", () => {
       lostTimestamp = Date.now();
     });
@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   
-    // 4. 拍照閃光特效
+    // 5. 拍照閃光特效
     shutterBtn.addEventListener("click", () => {
       const flashDiv = document.createElement("div");
       flashDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999;pointer-events:none;";
