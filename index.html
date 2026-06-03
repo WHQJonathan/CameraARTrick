@@ -11,7 +11,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icon-192.png">
 
-  <!-- A-Frame 1.4.2 + MindAR 1.2.5 -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
@@ -19,20 +18,15 @@
 </head>
 <body>
 
-  <!-- 手動啟動相機解鎖層（解決 iOS 自動播放限制） -->
+  <!-- 手動啟動相機解鎖層 -->
   <div id="ios-camera-unlocker">
     <div class="unlock-text">若畫面全黑，請點擊螢幕任意處啟用相機</div>
   </div>
 
   <!-- iOS 仿真相機介面 -->
   <div id="camera-ui">
-    
-    <!-- 1. 頂部黑色 Bar -->
     <div class="top-black-bar">
-      <!-- 綠色相機指示點 -->
       <div class="recording-dot"></div>
-      
-      <!-- 頂部右側懸浮控制膠囊 -->
       <div class="top-floating-pill">
         <span class="pill-icon">⚡️<sub style="font-size: 8px;">A</sub></span>
         <span class="pill-icon active-yellow">◎</span>
@@ -40,15 +34,10 @@
       </div>
     </div>
 
-    <!-- 2. 中間觀鏡視角 (大幅拉長相機畫面比例) -->
     <div class="viewfinder-viewport">
-      
-      <!-- 左下角小黃花微距鈕 -->
       <div class="macro-button">
         <span class="macro-icon">🌷</span>
       </div>
-
-      <!-- 水平變焦按鈕列 (.5, 1x, 2, 4, 8) -->
       <div class="zoom-row">
         <span class="zoom-dot">.5</span>
         <span class="zoom-dot active">1x</span>
@@ -56,43 +45,31 @@
         <span class="zoom-dot">4</span>
         <span class="zoom-dot">8</span>
       </div>
-
     </div>
 
-    <!-- 3. 底部黑色快門與控制面板 -->
     <div class="bottom-panel-ios">
-      
-      <!-- 快門按鈕行 -->
       <div class="shutter-row">
         <div class="ios-shutter-container" id="shutter-btn">
           <div class="ios-shutter-inner"></div>
         </div>
       </div>
-
-      <!-- 底部控制列 -->
       <div class="dock-row">
-        <!-- 左：仿真截圖中的參數轉盤 -->
         <div class="lens-dial">
           <span style="font-size: 8px; transform: scale(0.85); opacity: 0.8;">父 漲</span>
           <span class="dial-red">0.00</span>
         </div>
-
-        <!-- 中：錄影 / 拍照 圓角膠囊 -->
         <div class="modes-pill">
           <span class="mode-item">錄影</span>
           <span class="mode-item active" id="magic-status">拍照</span>
         </div>
-
-        <!-- 右：鏡頭切換鈕 (已綁定 ID) -->
         <div class="flip-button" id="flip-camera-btn">
           <span>🔄</span>
         </div>
       </div>
-
     </div>
   </div>
 
-  <!-- AR 場景 -->
+  <!-- AR 場景 (掛載自訂的 light-estimator 組件) -->
   <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;" 
     embedded 
@@ -100,11 +77,34 @@
     renderer="colorManagement: true, physicallyCorrectLights: true" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false"
+    light-estimator
   >
+    <!-- 引入紋理資源與法線貼圖 -->
+    <a-assets>
+      <img id="clubs5-texture" src="./clubs_5.png"> <!-- 梅花5 乾淨彩色圖 -->
+      <img id="clubs5-normal" src="./clubs_5_normal.png"> <!-- 梅花5 的紫藍色法線凹凸圖 -->
+    </a-assets>
+
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+    <!-- PBR 物理光影所需的光源：包含環境光與主方向光（模擬天花板燈光） -->
+    <a-light id="ambient-light" type="ambient" color="#ffffff" intensity="0.8"></a-light>
+    <a-light id="dir-light" type="directional" position="1 3 1" color="#ffffff" intensity="1.2"></a-light>
+
+    <!-- 撲克牌追蹤實體 -->
     <a-entity id="card-target" mindar-image-target="targetIndex: 0">
-      <a-image id="magic-card-overlay" src="./new_card.png" position="0 0 0" height="1.4" width="1" rotation="0 0 0" visible="true"></a-image>
+      <!-- 
+        使用 standard 著色器，設定粗糙度 (roughness) 與金屬度 (metalness) 
+        這能讓卡牌在轉動時，表面產生滑動的油亮反射，看起來像塗了塑膠保護層的實體牌。
+      -->
+      <a-entity 
+        id="magic-card-overlay"
+        geometry="primitive: plane; width: 1; height: 1.4" 
+        material="shader: standard; src: #clubs5-texture; normalMap: #clubs5-normal; normalScale: 0.1 0.1; roughness: 0.28; metalness: 0.08;"
+        position="0 0 0" 
+        rotation="0 0 0"
+        visible="true"
+      ></a-entity>
     </a-entity>
   </a-scene>
 
