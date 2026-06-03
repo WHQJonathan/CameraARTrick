@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icon-192.png">
 
-  <!-- A-Frame 1.4.2 + MindAR 1.2.5 (相容 iOS 鏡頭的最佳組合) -->
+  <!-- A-Frame 1.4.2 + MindAR 1.2.5 -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
@@ -19,7 +19,7 @@
 </head>
 <body>
 
-  <!-- 手動啟動相機解鎖層（解決 iOS 自動播放攔截） -->
+  <!-- 手動啟動相機解鎖層（解決 iOS 自動播放限制） -->
   <div id="ios-camera-unlocker">
     <div class="unlock-text">若畫面全黑，請點擊螢幕任意處啟用相機</div>
   </div>
@@ -29,10 +29,10 @@
     
     <!-- 1. 頂部黑色 Bar -->
     <div class="top-black-bar">
-      <!-- 綠色相機取用點 -->
+      <!-- 綠色相機指示點 -->
       <div class="recording-dot"></div>
       
-      <!-- 頂部右側懸浮控制膠囊 (置於黑色 Bar 內) -->
+      <!-- 頂部右側懸浮控制膠囊 -->
       <div class="top-floating-pill">
         <span class="pill-icon">⚡️<sub style="font-size: 8px;">A</sub></span>
         <span class="pill-icon active-yellow">◎</span>
@@ -43,12 +43,12 @@
     <!-- 2. 中間觀鏡視角 (大幅拉長相機畫面比例) -->
     <div class="viewfinder-viewport">
       
-      <!-- 左下角小黃花微距鈕 (懸浮於畫面左側) -->
+      <!-- 左下角小黃花微距鈕 -->
       <div class="macro-button">
         <span class="macro-icon">🌷</span>
       </div>
 
-      <!-- 水平變焦按鈕列 (無底盒懸浮，完美還原截圖) -->
+      <!-- 水平變焦按鈕列 (.5, 1x, 2, 4, 8) -->
       <div class="zoom-row">
         <span class="zoom-dot">.5</span>
         <span class="zoom-dot active">1x</span>
@@ -69,7 +69,7 @@
         </div>
       </div>
 
-      <!-- 底部控制列：參數轉盤、錄影/拍照膠囊、翻轉按鈕 -->
+      <!-- 底部控制列 -->
       <div class="dock-row">
         <!-- 左：仿真截圖中的參數轉盤 -->
         <div class="lens-dial">
@@ -83,8 +83,8 @@
           <span class="mode-item active" id="magic-status">拍照</span>
         </div>
 
-        <!-- 右：鏡頭切換鈕 -->
-        <div class="flip-button">
+        <!-- 右：鏡頭切換鈕 (已綁定 ID) -->
+        <div class="flip-button" id="flip-camera-btn">
           <span>🔄</span>
         </div>
       </div>

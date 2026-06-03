@@ -35,6 +35,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // 當使用者點選解鎖層時，啟動強制播放
     unlockerEl.addEventListener("click", forceUnlockCamera);
     document.body.addEventListener("click", forceUnlockCamera, { once: true });
+
+    // 3. ⭐️ 新增：前、後鏡頭切換功能 ⭐️
+    flipBtn.addEventListener("click", () => {
+        if (sceneEl.systems["mindar-image-system"]) {
+        console.log("進行前後鏡頭對調...");
+        sceneEl.systems["mindar-image-system"].switchCamera(); // 調用 MindAR 內建鏡頭切換 API
+        }
+    });
   
     // 3. 揮手遮擋魔術檢測邏輯
     targetEl.addEventListener("targetLost", () => {
