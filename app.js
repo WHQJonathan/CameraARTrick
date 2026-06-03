@@ -79,4 +79,23 @@ if ('serviceWorker' in navigator) {
         setTimeout(() => flashDiv.remove(), 400);
       }, 50);
     });
+        // 在 app.js 最下方加入此段偵錯碼
+    const sceneEl = document.querySelector('a-scene');
+
+    // 監聽 MindAR 啟動成功的事件
+    sceneEl.addEventListener('arReady', (event) => {
+    console.log("MindAR 引擎與相機已順利啟動！");
+    });
+
+    // 監聽 MindAR 啟動失敗的事件
+    sceneEl.addEventListener('arError', (event) => {
+    console.error("MindAR 啟動失敗：", event);
+    
+    // 彈出錯誤提示
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        alert("【錯誤】WebAR 必須在 HTTPS 安全連線下才能使用相機。請部署至 HTTPS 伺服器再測試。");
+    } else {
+        alert("【錯誤】無法啟動相機。請檢查是否已在瀏覽器設定中「允許」此網站存取相機。");
+    }
+    });
   });
