@@ -15,7 +15,18 @@ if ('serviceWorker' in navigator) {
   
     let isMagicActive = true; // 起始狀態：顯示覆蓋物（黑桃A）
     let lostTimestamp = 0;
-  
+
+    // ⭐️ 關鍵修正：當 AR 與相機載入完成後，將背景轉為透明，顯露鏡頭畫面
+    sceneEl.addEventListener('arReady', () => {
+        console.log("相機與引擎載入成功！");
+        document.body.classList.add('ar-active');
+    });
+
+    // 錯誤診斷監聽
+    sceneEl.addEventListener('arError', (event) => {
+        console.error("AR 啟動失敗：", event);
+        alert("相機啟動失敗，請確保使用 HTTPS 連線，並已授權相機權限。");
+    });
     // 1. 當手遮擋住撲克牌時，AR 追蹤斷開，記錄時間
     targetEl.addEventListener("targetLost", () => {
       lostTimestamp = Date.now();
