@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icon-192.png">
 
-  <!-- 降級至高度相容 iOS 的 A-Frame 1.4.2，這可以有效解決 1.5.0 在 iOS 上的鏡頭黑底問題 -->
+  <!-- A-Frame 1.4.2 + MindAR 1.2.5 (iOS 最佳穩定拍檔) -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
@@ -19,85 +19,79 @@
 </head>
 <body>
 
-  <!-- iOS 自動播放相機防護鎖（當 iOS 系統阻擋自動鏡頭時，會自動浮出此手動引導按鈕） -->
-  <div id="ios-camera-shield" class="hidden">
-    <div class="shield-content">
-      <div class="shield-icon">📷</div>
-      <p>iOS 需要授權啟動鏡頭</p>
-      <button id="activate-camera-btn">開啟相機</button>
-    </div>
+  <!-- 手動啟動相機解鎖層（解決 iOS 系統低電量或自動播放攔截） -->
+  <div id="ios-camera-unlocker">
+    <div class="unlock-text">若畫面全黑，請點擊螢幕任意處啟用相機</div>
   </div>
 
-  <!-- iOS 精準版相機介面 -->
+  <!-- 頂部與底部 100% 擬真 iOS 相機 UI -->
   <div id="camera-ui">
     
-    <!-- 頂部黑色背景遮罩 (4:3) -->
-    <div class="top-black-bar">
-      <!-- 綠色正在取用鏡頭指示點 -->
+    <!-- 1. 頂部狀態列 (綠色使用中指示點) -->
+    <div class="ios-status-indicator">
       <div class="recording-dot"></div>
     </div>
 
-    <!-- 中間透明觀景窗區域 (AR 鏡頭會在此區域透出) -->
-    <div class="viewfinder-viewport">
-      
-      <!-- 右上角功能控制膠囊 -->
+    <!-- 2. 中央觀景窗疊加層 -->
+    <div class="viewport-overlay">
+      <!-- 頂部右側懸浮控制膠囊 -->
       <div class="top-floating-pill">
         <span class="pill-icon">⚡️<sub style="font-size: 8px;">A</sub></span>
         <span class="pill-icon active-yellow">◎</span>
         <span class="pill-icon">⁙</span>
       </div>
 
-      <!-- 左下角微距黃色小花 -->
+      <!-- 左側小黃花微距按鈕 -->
       <div class="macro-button">
         <span class="macro-icon">🌷</span>
       </div>
 
-      <!-- 中央底部懸浮變焦按鈕 -->
-      <div class="zoom-container">
-        <span class="zoom-item">.5</span>
-        <span class="zoom-item active" id="zoom-1x">1x</span>
-        <span class="zoom-item">2</span>
-        <span class="zoom-item">4</span>
-        <span class="zoom-item">8</span>
+      <!-- 水平變焦按鈕列 (.5, 1x, 2, 4, 8) -->
+      <div class="zoom-row">
+        <span class="zoom-dot">.5</span>
+        <span class="zoom-dot active">1x</span>
+        <span class="zoom-dot">2</span>
+        <span class="zoom-dot">4</span>
+        <span class="zoom-dot">8</span>
       </div>
-
     </div>
 
-    <!-- 底部黑色面板 (4:3) -->
-    <div class="bottom-black-panel">
+    <!-- 3. 底部黑色面板 (遮罩快門與控制列) -->
+    <div class="bottom-panel-ios">
       
-      <!-- 控制與快門行 -->
+      <!-- 快門按鈕列 -->
       <div class="shutter-row">
-        <!-- 左下：相簿照片縮圖 -->
-        <div class="gallery-preview-box">
-          <div class="gallery-thumbnail-inner" style="background-image: url('icon-192.png');"></div>
-        </div>
-
-        <!-- 正中：經典 iOS 雙環白大快門 -->
-        <div class="ios-shutter-btn" id="shutter-btn">
+        <div class="ios-shutter-container" id="shutter-btn">
           <div class="ios-shutter-inner"></div>
-        </div>
-
-        <!-- 右下：相機翻轉鈕 -->
-        <div class="camera-flip-btn">
-          <span>🔄</span>
         </div>
       </div>
 
-      <!-- 最底部的「錄影 / 拍照」黃色高亮切換膠囊 -->
-      <div class="modes-pill-container">
+      <!-- 底部控制列：縮圖、錄影/拍照、翻轉按鈕 -->
+      <div class="dock-row">
+        <!-- 左：相簿轉盤縮圖 -->
+        <div class="lens-dial">
+          <div class="dial-thumb" style="background-image: url('icon-192.png');"></div>
+        </div>
+
+        <!-- 中：錄影 / 拍照 黑色圓角膠囊 -->
         <div class="modes-pill">
-          <span class="mode-text">錄影</span>
-          <span class="mode-text active" id="magic-status">拍照</span>
+          <span class="mode-item">錄影</span>
+          <span class="mode-item active" id="magic-status">拍照</span>
+        </div>
+
+        <!-- 右：鏡頭切換鈕 -->
+        <div class="flip-button">
+          <span>🔄</span>
         </div>
       </div>
 
     </div>
   </div>
 
-  <!-- AR 引擎 -->
+  <!-- AR 場景 (將預設背景強制關閉，確保底層視訊能完全透出) imageTargetSrc: ./targets.mind-->
   <a-scene 
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;" 
+    mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/WHQJonathan/CameraARTrick@main/targets.mind;; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;" 
+    
     embedded 
     color-space="sRGB" 
     renderer="colorManagement: true, physicallyCorrectLights: true" 

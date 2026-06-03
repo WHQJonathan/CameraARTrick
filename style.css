@@ -1,3 +1,4 @@
+/* 核心：徹底強制網頁與 A-Frame 背景全透，讓最底層相機視訊直接顯露 */
 body, html {
     margin: 0;
     padding: 0;
@@ -5,69 +6,93 @@ body, html {
     height: 100%;
     overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
-    background-color: #000000;
+    background: transparent !important;
     user-select: none;
     -webkit-user-select: none;
   }
   
-  /* 將 A-Frame Canvas 設為透明，避免遮蓋鏡頭 */
-  a-scene {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-  }
-  
-  .a-canvas {
+  /* 強制畫布與場景透明 */
+  a-scene, .a-canvas {
+    background: transparent !important;
     background-color: transparent !important;
   }
   
-  /* 強制相機視訊元件貼齊並沉在底部 */
+  /* 強制底層視訊元件顯現 */
   video {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     object-fit: cover !important;
     z-index: -2 !important;
+    display: block !important;
   }
   
-  /* 相機 UI 面板：採用精準的 4:3 比例切割 */
+  /* 手動解鎖提示層 */
+  #ios-camera-unlocker {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 99; /* 蓋在 UI 下方，但高於相機 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto; /* 允許點擊 */
+  }
+  
+  .unlock-text {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 8px 16px;
+    border-radius: 15px;
+    pointer-events: none;
+  }
+  
+  #ios-camera-unlocker.hidden {
+    display: none !important;
+  }
+  
+  /* 相機 UI 總容器 */
   #camera-ui {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 10;
+    z-index: 100;
     display: flex;
     flex-direction: column;
     pointer-events: none;
   }
   
   #camera-ui * {
-    pointer-events: auto; /* 允許 UI 元素接收點擊 */
+    pointer-events: auto;
   }
   
-  /* 1. 頂部遮罩黑條 */
-  .top-black-bar {
-    height: 12%;
-    background: #000000;
+  /* 1. 頂部狀態列 (iOS 原生綠點位置) */
+  .ios-status-indicator {
+    height: 40px;
     position: relative;
+    pointer-events: none;
   }
   
-  /* 綠色使用中指示點 */
   .recording-dot {
     position: absolute;
-    top: 15px;
+    top: 14px;
     left: 50%;
     transform: translateX(-50%);
-    width: 6px;
-    height: 6px;
+    width: 6.5px;
+    height: 6.5px;
     background-color: #00ff00;
     border-radius: 50%;
   }
   
-  /* 2. 中間 4:3 透明觀鏡視角 */
-  .viewfinder-viewport {
+  /* 2. 中央觀景窗疊加區 */
+  .viewport-overlay {
     flex-grow: 1;
     position: relative;
     pointer-events: none;
@@ -78,22 +103,23 @@ body, html {
     box-sizing: border-box;
   }
   
-  /* 頂部右側浮動功能膠囊 */
+  /* 頂部右側懸浮功能膠囊 */
   .top-floating-pill {
     align-self: flex-end;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
+    background: rgba(20, 20, 20, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     padding: 6px 14px;
     border-radius: 20px;
     display: flex;
     gap: 16px;
     align-items: center;
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
   }
   
   .pill-icon {
     color: #ffffff;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
   }
   
@@ -101,15 +127,14 @@ body, html {
     color: #FFD700;
   }
   
-  /* 左側黃色微距小花按鈕 */
+  /* 左下角小黃花微距鈕 */
   .macro-button {
-    pointer-events: auto;
     position: absolute;
-    left: 16px;
-    bottom: 80px;
-    width: 44px;
-    height: 44px;
-    background: rgba(0, 0, 0, 0.5);
+    left: 20px;
+    bottom: 60px;
+    width: 42px;
+    height: 42px;
+    background: rgba(20, 20, 20, 0.7);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-radius: 50%;
@@ -117,67 +142,101 @@ body, html {
     justify-content: center;
     align-items: center;
     cursor: pointer;
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
   }
   
   .macro-icon {
-    font-size: 18px;
+    font-size: 16px;
     color: #FFD700;
   }
   
-  /* 下方懸浮變焦按鈕（.5, 1x, 2, 4, 8） */
-  .zoom-container {
-    pointer-events: auto;
+  /* 水平變焦列 (.5, 1x, 2, 4, 8) */
+  .zoom-row {
     align-self: center;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    padding: 4px 14px;
-    border-radius: 20px;
     display: flex;
-    gap: 14px;
+    gap: 18px;
     align-items: center;
     margin-bottom: 8px;
+    background: rgba(20, 20, 20, 0.45);
+    padding: 2px 14px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
   
-  .zoom-item {
+  .zoom-dot {
     color: #ffffff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     display: flex;
     justify-content: center;
     align-items: center;
   }
   
-  .zoom-item.active {
-    color: #FFD700;
-    background: rgba(255, 255, 255, 0.15);
+  .zoom-dot.active {
+    color: #FFD700; /* 黃色 1x */
+    background: rgba(255, 255, 255, 0.22);
     border-radius: 50%;
   }
   
-  /* 3. 底部控制區黑面板 */
-  .bottom-black-panel {
-    height: 26%;
+  /* 3. 底部黑色快門與控制面板 */
+  .bottom-panel-ios {
+    height: 235px;
     background: #000000;
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
-    padding: 16px 0 env(safe-area-inset-bottom, 16px) 0;
+    padding: 16px 0 env(safe-area-inset-bottom, 20px) 0;
     box-sizing: border-box;
   }
   
-  /* 快門、相片、旋轉列 */
+  /* 快門行 */
   .shutter-row {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  /* iOS 經典雙環快門 */
+  .ios-shutter-container {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15); /* 半透明外環 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+  
+  .ios-shutter-container:active {
+    transform: scale(0.94);
+  }
+  
+  .ios-shutter-inner {
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    background-color: #ffffff;
+  }
+  
+  /* 底部功能與翻轉列 */
+  .dock-row {
     width: 100%;
     display: flex;
     justify-content: space-around;
     align-items: center;
+    padding: 0 16px;
+    box-sizing: border-box;
   }
   
-  .gallery-preview-box, .camera-flip-btn {
+  .lens-dial, .flip-button {
     width: 50px;
     height: 50px;
     display: flex;
@@ -185,19 +244,19 @@ body, html {
     align-items: center;
   }
   
-  .gallery-thumbnail-inner {
+  .dial-thumb {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.25);
+    border: 2px solid rgba(255, 255, 255, 0.2);
     background-size: cover;
     background-position: center;
   }
   
-  .camera-flip-btn span {
+  .flip-button span {
     font-size: 20px;
     color: #ffffff;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.12);
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -207,41 +266,18 @@ body, html {
     cursor: pointer;
   }
   
-  /* 經典 iOS 白大快門 */
-  .ios-shutter-btn {
-    width: 76px;
-    height: 76px;
-    border-radius: 50%;
-    border: 4px solid #ffffff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-  }
-  
-  .ios-shutter-inner {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #ffffff;
-  }
-  
-  /* 最底部的 錄影 / 拍照 選項膠囊 */
-  .modes-pill-container {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-  
+  /* 底部錄影 / 拍照 黑色選單膠囊 */
   .modes-pill {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 0.5px solid rgba(255, 255, 255, 0.12);
+    padding: 3px;
     border-radius: 20px;
     display: flex;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
   }
   
-  .mode-text {
-    font-size: 13px;
+  .mode-item {
+    font-size: 12px;
     font-weight: 600;
     color: #8E8E93;
     padding: 6px 18px;
@@ -249,53 +285,8 @@ body, html {
     transition: all 0.2s ease;
   }
   
-  .mode-text.active {
-    color: #FFD700; /* iOS 黃金色高亮 */
-    background: rgba(255, 255, 255, 0.15);
+  .mode-item.active {
+    color: #FFD700; /* 拍照黃色高亮 */
+    background: rgba(255, 255, 255, 0.12);
     border-radius: 18px;
-  }
-  
-  /* 手動權限防護盾樣式 */
-  #ios-camera-shield {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000000;
-    z-index: 100;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  #ios-camera-shield.hidden {
-    display: none !important;
-  }
-  
-  .shield-content {
-    text-align: center;
-    color: #ffffff;
-  }
-  
-  .shield-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
-  }
-  
-  .shield-content p {
-    font-size: 15px;
-    color: #8E8E93;
-    margin-bottom: 24px;
-  }
-  
-  .shield-content button {
-    background: #FFD700;
-    color: #000000;
-    border: none;
-    padding: 12px 32px;
-    font-size: 15px;
-    font-weight: bold;
-    border-radius: 24px;
-    cursor: pointer;
   }
