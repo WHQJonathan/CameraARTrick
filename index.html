@@ -69,39 +69,42 @@
     </div>
   </div>
 
-<!-- AR 場景 (已加入極限防抖參數) -->
-    <a-scene 
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 15; uiLoading: no; uiError: no; uiScanning: no;" 
-        embedded 
-        color-space="sRGB" 
-        renderer="colorManagement: true, physicallyCorrectLights: true" 
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false"
-        light-estimator
-        >
-        <a-assets>
-        <img id="clubs5-mask-texture" src="./clubs_5_mask.png"> 
-        <img id="clubs5-normal" src="./clubs_5_normal.png"> 
-        </a-assets>
+<!-- AR 場景 (已更新為高靈敏、零延遲追蹤參數) -->
+<a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; filterMinCF: 0.005; filterBeta: 10; missTolerance: 15; uiLoading: no; uiError: no; uiScanning: no;" 
+    embedded 
+    color-space="sRGB" 
+    renderer="colorManagement: true, physicallyCorrectLights: true" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false"
+    light-estimator
+    >
+    <a-assets>
+    <img id="clubs5-mask-texture" src="./clubs_5_mask.png"> 
+    <img id="clubs5-normal" src="./clubs_5_normal.png"> 
+    </a-assets>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <a-light id="ambient-light" type="ambient" color="#ffffff" intensity="0.8"></a-light>
-        <a-light id="dir-light" type="directional" position="1 3 1" color="#ffffff" intensity="1.2"></a-light>
+    <a-light id="ambient-light" type="ambient" color="#ffffff" intensity="0.8"></a-light>
+    <a-light id="dir-light" type="directional" position="1 3 1" color="#ffffff" intensity="1.2"></a-light>
 
-        <a-entity id="card-target" mindar-image-target="targetIndex: 0">
-        <a-entity 
-            id="magic-card-overlay"
-            geometry="primitive: plane; width: 1.15; height: 1.4" 
-            material="shader: standard; src: #clubs5-mask-texture; normalMap: #clubs5-normal; normalScale: 0.1 0.1; roughness: 0.28; metalness: 0.08; transparent: true; alphaTest: 0.5;"
-            position="0 -0.35 0" 
-            rotation="0 0 0"
-            scale="1 1 1"
-            visible="true"
-        ></a-entity>
-        </a-entity>
-    </a-scene>
-    <!-- 引入紋理資源與法線貼圖 -->
+    <a-entity id="card-target" mindar-image-target="targetIndex: 0">
+    <!-- 
+        若您已將三張圖都裁切至卡身邊緣，此處寬高比例設定為 width: 1; height: 1.4; 
+        大小便會自動與實體卡牌 1:1 完美貼合，不會再產生縮小或歪斜。
+    -->
+    <a-entity 
+        id="magic-card-overlay"
+        geometry="primitive: plane; width: 1; height: 1.4" 
+        material="shader: standard; src: #clubs5-mask-texture; normalMap: #clubs5-normal; normalScale: 0.1 0.1; roughness: 0.35; metalness: 0.05; transparent: true; alphaTest: 0.5;"
+        position="0 0 0" 
+        rotation="0 0 0"
+        scale="1 1 1"
+        visible="true"
+    ></a-entity>
+</a-entity>
+</a-scene>
     <a-assets>
         <!-- 這張貼圖必須是：背景透明、在紅心8位置有白色色塊、在梅花5位置有黑色梅花圖案的 PNG 檔 -->
         <img id="clubs5-mask-texture" src="./clubs_5_mask.png"> 
