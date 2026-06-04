@@ -313,3 +313,85 @@ a-scene {
   .blur-active {
     filter: blur(8px) saturate(1.1) !important;
   }
+
+  /* 保持您原有的樣式不變，並在下方追加以下代碼： */
+
+/* 秘密校準面板樣式 */
+#calibration-panel {
+    position: absolute;
+    top: 70px;
+    left: 5%;
+    width: 90%;
+    background: rgba(10, 10, 10, 0.88);
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 18px;
+    padding: 16px;
+    box-sizing: border-box;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: #ffffff;
+    font-size: 13px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+  
+  #calibration-panel.hidden {
+    display: none !important;
+  }
+  
+  #calibration-panel h3 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    color: #FFD700;
+    text-align: center;
+  }
+  
+  .cal-control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .cal-control label {
+    display: flex;
+    justify-content: space-between;
+    color: #bbb;
+  }
+  
+  .cal-control input[type="range"] {
+    width: 100%;
+    accent-color: #FFD700; /* 使用 iOS 黃金主色 */
+    cursor: pointer;
+  }
+  
+  /* 校準面板按鈕 */
+  #save-cal-btn {
+    flex: 2;
+    background: #FFD700;
+    color: #000000;
+    border: none;
+    padding: 8px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  
+  #reset-cal-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border: none;
+    padding: 8px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  
+  #save-cal-btn:active, #reset-cal-btn:active {
+    transform: scale(0.96);
+  }

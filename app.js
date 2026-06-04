@@ -86,36 +86,132 @@ AFRAME.registerComponent('light-estimator', {
     const flipBtn = document.getElementById("flip-camera-btn");
     const statusEl = document.getElementById("magic-status");
   
-    let isMagicActive = true; // 預設顯示梅花5
+    // ⭐️ 新增：校準控制項 DOM 節點
+    const openCalBtn = document.getElementById("open-cal-btn");
+    const calPanel = document.getElementById("calibration-panel");
+    const saveCalBtn = document.getElementById("save-cal-btn");
+    const resetCalBtn = document.getElementById("reset-cal-btn");
+  
+    const sliderX = document.getElementById("cal-x");
+    const sliderY = document.getElementById("cal-y");
+    const sliderSX = document.getElementById("cal-sx");
+    const sliderSY = document.getElementById("cal-sy");
+    const sliderRZ = document.getElementById("cal-rz");
+  
+    const valX = document.getElementById("val-x");
+    const valY = document.getElementById("val-y");
+    const valSX = document.getElementById("val-sx");
+    const valSY = document.getElementById("val-sy");
+    const valRZ = document.getElementById("val-rz");
+  
+    let isMagicActive = true;
     let isCameraActive = false;
   
-    // 1. 偵測相機啟動
+    // 預設對齊參數
+    const DEFAULT_CAL = { x: 0, y: -0.35, sx: 1.0, sy: 1.0, rz: 0 };
+  
+    // 1. 初始化時載入儲存的校準值
+    loadCalibration();
+  
+    function loadCalibration() {
+      const x = localStorage.getItem("cal_x") !== null ? parseFloat(localStorage.getItem("cal_x")) : DEFAULT_CAL.x;
+      const y = localStorage.getItem("cal_y") !== null ? parseFloat(localStorage.getItem("cal_y")) : DEFAULT_CAL.y;
+      const sx = localStorage.getItem("cal_sx") !== null ? parseFloat(localStorage.getItem("cal_sx")) : DEFAULT_CAL.sx;
+      const sy = localStorage.getItem("cal_sy") !== null ? parseFloat(localStorage.getItem("cal_sy")) : DEFAULT_CAL.sy;
+      const rz = localStorage.getItem("cal_rz") !== null ? parseFloat(localStorage.getItem("cal_rz")) : DEFAULT_CAL.rz;
+  
+      // 更新滑桿數值與文字
+      sliderX.value = x; valX.textContent = x;
+      sliderY.value = y; valY.textContent = y;
+      sliderSX.value = sx; valSX.textContent = sx;
+      sliderSY.value = sy; valSY.textContent = sy;
+      sliderRZ.value = rz; valRZ.textContent = rz;
+  
+      // 直接應用到 A-Frame 3D 卡片上
+      applyCalibration(x, y, sx, sy, rz);
+    }
+  
+    // 將拉桿參數即時綁定並應用到 3D 疊加卡片上
+    function applyCalibration(x, y, sx, sy, rz) {
+      overlayEl.setAttribute("position", `${x} ${y} 0`);
+      overlayEl.setAttribute("scale", `${sx} ${sy} 1`);
+      overlayEl.setAttribute("rotation", `0 0 ${rz}`);
+    }
+  
+    // 監聽拉桿拖動，實現「即時無感對齊預覽」
+    const handleSliderChange = () => {
+      const x = parseFloat(sliderX.value);
+      const y = parseFloat(sliderY.value);
+      const sx = parseFloat(sliderSX.value);
+      const sy = parseFloat(sliderSY.value);
+      const rz = parseFloat(sliderRZ.value);
+  
+      valX.textContent = x;
+      valY.textContent = y;
+      valSX.textContent = sx;
+      valSY.textContent = sy;
+      valRZ.textContent = rz;
+  
+      applyCalibration(x, y, sx, sy, rz);
+    };
+  
+    [sliderX, sliderY, sliderSX, sliderSY, sliderRZ].forEach(slider => {
+      slider.addEventListener("input", handleSliderChange);
+    });
+  
+    // 秘密校準開關切換
+    openCalBtn.addEventListener("click", () => {
+      calPanel.classList.toggle("hidden");
+    });
+  
+    // 點擊「儲存」：永久記在手機記憶體
+    saveCalBtn.addEventListener("click", () => {
+      localStorage.setItem("cal_x", sliderX.value);
+      localStorage.setItem("cal_y", sliderY.value);
+      localStorage.setItem("cal_sx", sliderSX.value);
+      localStorage.setItem("cal_sy", sliderSY.value);
+      localStorage.setItem("cal_rz", sliderRZ.value);
+      calPanel.classList.add("hidden");
+      alert("對齊設定已儲存！");
+    });
+  
+    // 點擊「重設」：恢復為初始數值
+    resetCalBtn.addEventListener("click", () => {
+      if (confirm("確定要將校準重置為預設值嗎？")) {
+        sliderX.value = DEFAULT_CAL.x; valX.textContent = DEFAULT_CAL.x;
+        sliderY.value = DEFAULT_CAL.y; valY.textContent = DEFAULT_CAL.y;
+        sliderSX.value = DEFAULT_CAL.sx; valSX.textContent = DEFAULT_CAL.sx;
+        sliderSY.value = DEFAULT_CAL.sy; valSY.textContent = DEFAULT_CAL.sy;
+        sliderRZ.value = DEFAULT_CAL.rz; valRZ.textContent = DEFAULT_CAL.rz;
+        
+        applyCalibration(DEFAULT_CAL.x, DEFAULT_CAL.y, DEFAULT_CAL.sx, DEFAULT_CAL.sy, DEFAULT_CAL.rz);
+      }
+    });
+  
+  
+    // 2. 偵測相機啟動成功 (其餘魔術邏輯皆完整保留)
     sceneEl.addEventListener('arReady', () => {
       isCameraActive = true;
       unlockerEl.classList.add('hidden');
-      // 請求 iOS 手機的動作感應器授權 (iOS 13+ 安全要求)
       requestDeviceMotionPermission();
     });
   
-    // iOS 動作感應器授權請求
     function requestDeviceMotionPermission() {
       if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
           .then(permissionState => {
-            if (permissionState === 'granted') {
-              console.log("動作感應器授權成功");
-            }
+            if (permissionState === 'granted') console.log("動作感應器授權成功");
           })
           .catch(console.error);
       }
     }
   
-    // 2. ⭐️ 物理晃動偵測與變牌邏輯 ⭐️
+    // 3. 物理晃動偵測與變牌邏輯 (晃一下變牌)
     let lastX, lastY, lastZ;
-    const SHAKE_THRESHOLD = 18; // 晃動敏感度 (數值越小越敏感，建議設在 15~22 之間)
+    const SHAKE_THRESHOLD = 18;
   
     window.addEventListener('devicemotion', (event) => {
-      if (!isCameraActive || !isMagicActive) return; // 如果已經是原本的紅心8，就不重複觸發
+      if (!isCameraActive || !isMagicActive) return;
   
       const acc = event.accelerationIncludingGravity;
       if (!acc) return;
@@ -129,7 +225,6 @@ AFRAME.registerComponent('light-estimator', {
         const deltaY = Math.abs(y - lastY);
         const deltaZ = Math.abs(z - lastZ);
   
-        // 如果手部震動的總能量大於閾值
         if ((deltaX + deltaY + deltaZ) > SHAKE_THRESHOLD) {
           triggerShakeChange();
         }
@@ -140,28 +235,23 @@ AFRAME.registerComponent('light-estimator', {
       lastZ = z;
     });
   
-    // 執行「晃一下變牌」
     function triggerShakeChange() {
-      isMagicActive = false; // 變回紅心8
-  
-      // A. 立即加入動態模糊類別，模糊畫面來掩蓋 3D 元件的消失瞬間
+      isMagicActive = false;
       sceneEl.classList.add('blur-active');
   
-      // B. 在動態模糊中，瞬間將梅花 5 的遮罩隱藏（顯露出原本底層的實體紅心 8）
       setTimeout(() => {
         overlayEl.setAttribute("visible", "false");
         statusEl.textContent = "拍照";
         statusEl.style.color = "#ffffff";
-        if (navigator.vibrate) navigator.vibrate([60, 30, 60]); // 震動回饋
-      }, 80); // 80毫秒：人類視覺殘影的黃金轉換時間
+        if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
+      }, 80);
   
-      // C. 0.3 秒後（晃動停止時），移除動態模糊，讓畫面重回銳利
       setTimeout(() => {
         sceneEl.classList.remove('blur-active');
       }, 300);
     }
   
-    // 3. iOS 相機手勢解鎖
+    // 4. iOS 相機手勢解鎖
     const forceUnlockCamera = () => {
       const videoElements = document.querySelectorAll('video');
       videoElements.forEach(video => {
@@ -169,7 +259,7 @@ AFRAME.registerComponent('light-estimator', {
         video.setAttribute('muted', '');
         video.play().then(() => {
           unlockerEl.classList.add('hidden');
-          requestDeviceMotionPermission(); // 解鎖時順便請求感應器權限
+          requestDeviceMotionPermission();
         }).catch(err => console.log(err));
       });
   
@@ -181,7 +271,7 @@ AFRAME.registerComponent('light-estimator', {
     unlockerEl.addEventListener("click", forceUnlockCamera);
     document.body.addEventListener("click", forceUnlockCamera, { once: true });
   
-    // 4. 前後鏡頭切換
+    // 5. 前後鏡頭切換
     flipBtn.addEventListener("click", async () => {
       const arSystem = sceneEl.systems["mindar-image-system"];
       if (!arSystem) return;
@@ -198,7 +288,7 @@ AFRAME.registerComponent('light-estimator', {
       }
     });
   
-    // 5. 拍照快門
+    // 6. 拍照快門
     shutterBtn.addEventListener("click", () => {
       const flashDiv = document.createElement("div");
       flashDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999;pointer-events:none;";

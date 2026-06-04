@@ -11,6 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icon-192.png">
 
+  <!-- A-Frame 1.4.2 + MindAR 1.2.5 -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
@@ -25,15 +26,56 @@
 
   <!-- iOS 仿真相機介面 -->
   <div id="camera-ui">
+    
+    <!-- 1. 頂部黑色 Bar -->
     <div class="top-black-bar">
       <div class="recording-dot"></div>
+      
+      <!-- 頂部右側懸浮控制膠囊 -->
       <div class="top-floating-pill">
         <span class="pill-icon">⚡️<sub style="font-size: 8px;">A</sub></span>
         <span class="pill-icon active-yellow">◎</span>
-        <span class="pill-icon">⁙</span>
+        <!-- ⭐️ 秘密校準開關：點選 ⁙ 即可打開/關閉手動對齊面板 -->
+        <span class="pill-icon" id="open-cal-btn" style="cursor: pointer;">⁙</span>
       </div>
     </div>
 
+    <!-- ⭐️ 新增：秘密對齊校準面板 ⭐️ -->
+    <div id="calibration-panel" class="hidden">
+      <h3>🔧 變牌對齊手動校準</h3>
+      
+      <div class="cal-control">
+        <label>左右位移 (X): <span id="val-x">0</span></label>
+        <input type="range" id="cal-x" min="-0.4" max="0.4" step="0.005" value="0">
+      </div>
+      
+      <div class="cal-control">
+        <label>上下位移 (Y): <span id="val-y">-0.35</span></label>
+        <input type="range" id="cal-y" min="-1.0" max="0.2" step="0.005" value="-0.35">
+      </div>
+      
+      <div class="cal-control">
+        <label>卡牌寬度 (Scale X): <span id="val-sx">1.0</span></label>
+        <input type="range" id="cal-sx" min="0.5" max="1.8" step="0.005" value="1.0">
+      </div>
+      
+      <div class="cal-control">
+        <label>卡牌高度 (Scale Y): <span id="val-sy">1.0</span></label>
+        <input type="range" id="cal-sy" min="0.5" max="1.8" step="0.005" value="1.0">
+      </div>
+
+      <div class="cal-control">
+        <label>旋轉角度 (Rot Z): <span id="val-rz">0</span>°</label>
+        <input type="range" id="cal-rz" min="-45" max="45" step="0.5" value="0">
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 5px;">
+        <button id="reset-cal-btn">恢復重設</button>
+        <button id="save-cal-btn">💾 儲存並關閉</button>
+      </div>
+    </div>
+
+    <!-- 2. 中間觀鏡視角 -->
     <div class="viewfinder-viewport">
       <div class="macro-button">
         <span class="macro-icon">🌷</span>
@@ -47,6 +89,7 @@
       </div>
     </div>
 
+    <!-- 3. 底部黑色面板 -->
     <div class="bottom-panel-ios">
       <div class="shutter-row">
         <div class="ios-shutter-container" id="shutter-btn">
@@ -69,8 +112,8 @@
     </div>
   </div>
 
-<!-- AR 場景 (已更新為高靈敏、零延遲追蹤參數) -->
-<a-scene 
+  <!-- AR 場景 -->
+  <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; filterMinCF: 0.005; filterBeta: 10; missTolerance: 15; uiLoading: no; uiError: no; uiScanning: no;" 
     embedded 
     color-space="sRGB" 
@@ -78,10 +121,10 @@
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false"
     light-estimator
-    >
+  >
     <a-assets>
-    <img id="clubs5-mask-texture" src="./clubs_5_mask.png"> 
-    <img id="clubs5-normal" src="./clubs_5_normal.png"> 
+      <img id="clubs5-mask-texture" src="./clubs_5_mask.png"> 
+      <img id="clubs5-normal" src="./clubs_5_normal.png"> 
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -90,56 +133,17 @@
     <a-light id="dir-light" type="directional" position="1 3 1" color="#ffffff" intensity="1.2"></a-light>
 
     <a-entity id="card-target" mindar-image-target="targetIndex: 0">
-    <!-- 
-        若您已將三張圖都裁切至卡身邊緣，此處寬高比例設定為 width: 1; height: 1.4; 
-        大小便會自動與實體卡牌 1:1 完美貼合，不會再產生縮小或歪斜。
-    -->
-    <a-entity 
+      <!-- 初始參數將會由 JS 自動從記憶體載入 -->
+      <a-entity 
         id="magic-card-overlay"
         geometry="primitive: plane; width: 1; height: 1.4" 
         material="shader: standard; src: #clubs5-mask-texture; normalMap: #clubs5-normal; normalScale: 0.1 0.1; roughness: 0.35; metalness: 0.05; transparent: true; alphaTest: 0.5;"
-        position="0 0 0" 
+        position="0 -0.35 0" 
         rotation="0 0 0"
         scale="1 1 1"
         visible="true"
-    ></a-entity>
-</a-entity>
-</a-scene>
-    <a-assets>
-        <!-- 這張貼圖必須是：背景透明、在紅心8位置有白色色塊、在梅花5位置有黑色梅花圖案的 PNG 檔 -->
-        <img id="clubs5-mask-texture" src="./clubs_5_mask.png"> 
-        <img id="clubs5-normal" src="./clubs_5_normal.png"> 
-      </a-assets>
-
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-    <!-- PBR 物理光影所需的光源：包含環境光與主方向光（模擬天花板燈光） -->
-    <a-light id="ambient-light" type="ambient" color="#ffffff" intensity="0.8"></a-light>
-    <a-light id="dir-light" type="directional" position="1 3 1" color="#ffffff" intensity="1.2"></a-light>
-
-    <!-- 撲克牌追蹤實體 -->
-        <!-- 假設您的 targets.mind 是使用「上半張牌」的照片進行編譯訓練 -->
-        <a-entity id="card-target" mindar-image-target="targetIndex: 0">
-        
-            <!-- 
-            【修正重點】：
-            1. src 更換為您自製的「透明底色、帶白色抹除塊與黑色梅花5符號」的 PNG 貼圖。
-            2. 由於追蹤點在「上半張牌」，我們透過 position 屬性將虛擬貼圖往下位移，使其對齊整張實體牌。
-                💡 微調指南：
-                - position="[左右X] [上下Y] [前後Z]"
-                - 如果梅花 5 偏高，請將第二個數字調小（例如改成 -0.38 或 -0.4）。
-                - 如果梅花 5 偏低，請將第二個數字調大（例如改成 -0.3 或 -0.25）。
-            -->
-            <a-entity 
-            id="magic-card-overlay"
-            geometry="primitive: plane; width: 1.15; height: 1.4" 
-            material="shader: standard; src: #clubs5-mask-texture; normalMap: #clubs5-normal; normalScale: 0.1 0.1; roughness: 0.28; metalness: 0.08; transparent: true; alphaTest: 0.5;"
-            position="0 -0.35 0" 
-            rotation="0 0 0"
-            scale="0.9 1 1"
-            visible="true"
-            ></a-entity>
-        </a-entity>
+      ></a-entity>
+    </a-entity>
   </a-scene>
 
   <script src="app.js"></script>
