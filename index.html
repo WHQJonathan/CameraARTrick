@@ -81,9 +81,10 @@
   >
     <!-- 引入紋理資源與法線貼圖 -->
     <a-assets>
-      <img id="clubs5-texture" src="./clubs_5.png"> <!-- 梅花5 乾淨彩色圖 -->
-      <img id="clubs5-normal" src="./clubs_5_normal.png"> <!-- 梅花5 的紫藍色法線凹凸圖 -->
-    </a-assets>
+        <!-- 這張貼圖必須是：背景透明、在紅心8位置有白色色塊、在梅花5位置有黑色梅花圖案的 PNG 檔 -->
+        <img id="clubs5-mask-texture" src="./clubs_5_mask.png"> 
+        <img id="clubs5-normal" src="./clubs_5_normal.png"> 
+      </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
@@ -92,25 +93,28 @@
     <a-light id="dir-light" type="directional" position="1 3 1" color="#ffffff" intensity="1.2"></a-light>
 
     <!-- 撲克牌追蹤實體 -->
-    <a-entity id="card-target" mindar-image-target="targetIndex: 0">
-        <!-- 
-        【修正重點】：
-        1. 加上 transparent: true; 與 alphaTest: 0.5; 自動消除 PNG 卡牌四周的透明黑色區塊。
-        2. 加入 scale="0.9 0.9 1" 屬性將卡牌縮小 (預設縮小 10%)。
-            💡 微調指南：
-            - 如果梅花 5 依然「太大」：請將 0.9 改小，例如 scale="0.85 0.85 1" 或 scale="0.8 0.8 1"
-            - 如果梅花 5 變得「太小」：請將 0.9 改大，例如 scale="0.95 0.95 1" 或 scale="0.98 0.98 1"
-        -->
-        <a-entity 
-        id="magic-card-overlay"
-        geometry="primitive: plane; width: 1; height: 1.4" 
-        material="shader: standard; src: #clubs5-texture; normalMap: #clubs5-normal; normalScale: 0.1 0.1; roughness: 0.28; metalness: 0.08; transparent: true; alphaTest: 0.5;"
-        position="0 0 0" 
-        rotation="0 0 0"
-        scale="2.5 1 1.5"
-        visible="true"
-        ></a-entity>
-    </a-entity>
+        <!-- 假設您的 targets.mind 是使用「上半張牌」的照片進行編譯訓練 -->
+        <a-entity id="card-target" mindar-image-target="targetIndex: 0">
+        
+            <!-- 
+            【修正重點】：
+            1. src 更換為您自製的「透明底色、帶白色抹除塊與黑色梅花5符號」的 PNG 貼圖。
+            2. 由於追蹤點在「上半張牌」，我們透過 position 屬性將虛擬貼圖往下位移，使其對齊整張實體牌。
+                💡 微調指南：
+                - position="[左右X] [上下Y] [前後Z]"
+                - 如果梅花 5 偏高，請將第二個數字調小（例如改成 -0.38 或 -0.4）。
+                - 如果梅花 5 偏低，請將第二個數字調大（例如改成 -0.3 或 -0.25）。
+            -->
+            <a-entity 
+            id="magic-card-overlay"
+            geometry="primitive: plane; width: 1.15; height: 1.4" 
+            material="shader: standard; src: #clubs5-mask-texture; normalMap: #clubs5-normal; normalScale: 0.1 0.1; roughness: 0.28; metalness: 0.08; transparent: true; alphaTest: 0.5;"
+            position="0 -0.35 0" 
+            rotation="0 0 0"
+            scale="1 1 1"
+            visible="true"
+            ></a-entity>
+        </a-entity>
   </a-scene>
 
   <script src="app.js"></script>
