@@ -84,16 +84,84 @@ AFRAME.registerComponent('light-estimator', {
     const shutterBtn = document.getElementById("shutter-btn");
     const unlockerEl = document.getElementById("ios-camera-unlocker");
     const flipBtn = document.getElementById("flip-camera-btn");
+    const statusEl = document.getElementById("magic-status");
   
-    let isMagicActive = true;
-    let lostTimestamp = 0;
+    let isMagicActive = true; // 預設顯示梅花5
     let isCameraActive = false;
   
+    // 1. 偵測相機啟動
     sceneEl.addEventListener('arReady', () => {
       isCameraActive = true;
       unlockerEl.classList.add('hidden');
+      // 請求 iOS 手機的動作感應器授權 (iOS 13+ 安全要求)
+      requestDeviceMotionPermission();
     });
   
+    // iOS 動作感應器授權請求
+    function requestDeviceMotionPermission() {
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              console.log("動作感應器授權成功");
+            }
+          })
+          .catch(console.error);
+      }
+    }
+  
+    // 2. ⭐️ 物理晃動偵測與變牌邏輯 ⭐️
+    let lastX, lastY, lastZ;
+    const SHAKE_THRESHOLD = 18; // 晃動敏感度 (數值越小越敏感，建議設在 15~22 之間)
+  
+    window.addEventListener('devicemotion', (event) => {
+      if (!isCameraActive || !isMagicActive) return; // 如果已經是原本的紅心8，就不重複觸發
+  
+      const acc = event.accelerationIncludingGravity;
+      if (!acc) return;
+  
+      const x = acc.x;
+      const y = acc.y;
+      const z = acc.z;
+  
+      if (lastX !== undefined) {
+        const deltaX = Math.abs(x - lastX);
+        const deltaY = Math.abs(y - lastY);
+        const deltaZ = Math.abs(z - lastZ);
+  
+        // 如果手部震動的總能量大於閾值
+        if ((deltaX + deltaY + deltaZ) > SHAKE_THRESHOLD) {
+          triggerShakeChange();
+        }
+      }
+  
+      lastX = x;
+      lastY = y;
+      lastZ = z;
+    });
+  
+    // 執行「晃一下變牌」
+    function triggerShakeChange() {
+      isMagicActive = false; // 變回紅心8
+  
+      // A. 立即加入動態模糊類別，模糊畫面來掩蓋 3D 元件的消失瞬間
+      sceneEl.classList.add('blur-active');
+  
+      // B. 在動態模糊中，瞬間將梅花 5 的遮罩隱藏（顯露出原本底層的實體紅心 8）
+      setTimeout(() => {
+        overlayEl.setAttribute("visible", "false");
+        statusEl.textContent = "拍照";
+        statusEl.style.color = "#ffffff";
+        if (navigator.vibrate) navigator.vibrate([60, 30, 60]); // 震動回饋
+      }, 80); // 80毫秒：人類視覺殘影的黃金轉換時間
+  
+      // C. 0.3 秒後（晃動停止時），移除動態模糊，讓畫面重回銳利
+      setTimeout(() => {
+        sceneEl.classList.remove('blur-active');
+      }, 300);
+    }
+  
+    // 3. iOS 相機手勢解鎖
     const forceUnlockCamera = () => {
       const videoElements = document.querySelectorAll('video');
       videoElements.forEach(video => {
@@ -101,6 +169,7 @@ AFRAME.registerComponent('light-estimator', {
         video.setAttribute('muted', '');
         video.play().then(() => {
           unlockerEl.classList.add('hidden');
+          requestDeviceMotionPermission(); // 解鎖時順便請求感應器權限
         }).catch(err => console.log(err));
       });
   
@@ -112,6 +181,7 @@ AFRAME.registerComponent('light-estimator', {
     unlockerEl.addEventListener("click", forceUnlockCamera);
     document.body.addEventListener("click", forceUnlockCamera, { once: true });
   
+    // 4. 前後鏡頭切換
     flipBtn.addEventListener("click", async () => {
       const arSystem = sceneEl.systems["mindar-image-system"];
       if (!arSystem) return;
@@ -128,33 +198,7 @@ AFRAME.registerComponent('light-estimator', {
       }
     });
   
-    // 揮手檢測 (紅心8 / 梅花5 轉換)
-    targetEl.addEventListener("targetLost", () => {
-      lostTimestamp = Date.now();
-    });
-  
-    targetEl.addEventListener("targetFound", () => {
-      if (lostTimestamp > 0) {
-        const duration = Date.now() - lostTimestamp;
-        if (duration >= 150 && duration <= 900) {
-          isMagicActive = !isMagicActive;
-          // 使用 A-Frame attribute 控制 PBR 物件顯示
-          overlayEl.setAttribute("visible", isMagicActive ? "true" : "false");
-          
-          const statusEl = document.getElementById("magic-status");
-          if (isMagicActive) {
-            statusEl.textContent = "拍照";
-            statusEl.style.color = "#FFD700";
-          } else {
-            statusEl.textContent = "拍照";
-            statusEl.style.color = "#ffffff";
-          }
-          if (navigator.vibrate) navigator.vibrate(50);
-        }
-        lostTimestamp = 0;
-      }
-    });
-  
+    // 5. 拍照快門
     shutterBtn.addEventListener("click", () => {
       const flashDiv = document.createElement("div");
       flashDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999;pointer-events:none;";

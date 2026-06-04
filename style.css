@@ -302,3 +302,14 @@ body, html {
     background: rgba(255, 255, 255, 0.15);
     border-radius: 18px;
   }
+  /* 保持原有樣式不變，並在最下方新增以下樣式 */
+
+/* 模擬相機快速晃動時的動態殘影與飽和度流失 */
+a-scene {
+    transition: filter 0.1s ease;
+  }
+  
+  /* 當晃動被觸發時，此 class 會被動態加入，給予 AR 卡牌真實的運動模糊 */
+  .blur-active {
+    filter: blur(8px) saturate(1.1) !important;
+  }
